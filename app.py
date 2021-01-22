@@ -22,8 +22,9 @@ import tkinter, tkinter.filedialog
 import click
 # 現在日付取得用
 from datetime import datetime
-# Excelファイル操作(Excelファイルに画像を貼り付ける用にPillowもインストールが必要、インポートは不要)
-import openpyxl
+# Excelファイル操作
+import win32com.client
+from pywintypes import TimeType
 # 暗号化/複合化を行うクラス
 from encrypter import simple_encrypter
 # バックアップ用
@@ -40,6 +41,21 @@ WORK_DIR = 'work' + os.sep + CURRENT_DATE + os.sep
 LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
 ENCRYPTION_KEY = 'UWAm1mweGbaCdwab'
+# Trade-Performance(2021年度)の各月の入力行数
+BUSINESS_DAY_EXCEL_ROW_MAP = {
+    1: [4, 22],
+    2: [4, 21],
+    3: [4, 26],
+    4: [4, 24],
+    5: [4, 21],
+    6: [4, 25],
+    7: [4, 23],
+    8: [4, 24],
+    9: [4, 23],
+    10: [4, 24],
+    11: [4, 23],
+    12: [4, 25],
+}
 
 # ログファイル
 if not os.path.exists(LOG_DIR):
@@ -189,7 +205,7 @@ def main(debug):
     if debug:
         save_current_html_source(driver, '口座管理画面のソースを保存', 'account_management.html')
 
-    logger.debug('口座管理画面の計欄の数値を取得')
+    logger.debug('口座管理画面の「計」を取得')
     sum_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr:nth-child(8) > td:nth-child(2) > div > b'
     current_sum = driver.find_element_by_css_selector(sum_selector_path).text
 
@@ -197,35 +213,44 @@ def main(debug):
     driver.close()
     driver.quit()
 
-    logger.info("バックアップを作成してExcelに書き込む")
+    logger.info("Excelファイルのバックアップを作成")
     shutil.copy(config['trade_performance_xlsx_path'], WORK_DIR + os.path.basename(config['trade_performance_xlsx_path']))
     today_md_slash = datetime.today().strftime('%#m/%#d')
-    wb = openpyxl.load_workbook(config['trade_performance_xlsx_path'])
+    today_m_int = int(datetime.today().strftime('%#m'))
+
+    logger.debug("pywin32でExcelファイルを開く")
+    app = win32com.client.Dispatch("Excel.Application")
+    wb = app.Workbooks.Open(config['trade_performance_xlsx_path'])
 
     target_sheet_name = datetime.today().strftime('%#m') + '月'
     logger.debug(target_sheet_name + 'のシート取得')
-    ws = wb[target_sheet_name]
+    ws = wb.Worksheets(target_sheet_name)
 
-    # A4～A30の範囲の月日と今日の月日を比較して計の書き込み先を見つける
+    # A列の月日とプログラムの実行日を比較して↑で取得した「計」の書き込み先を見つける
     target_row_num = None
-    for row in ws['A4:A26']: #一番営業日が多い月(3月)に揃える
-        for cell in row:
-            if (today_md_slash == openpyxl.utils.datetime.from_excel(cell.value).strftime('%#m/%#d')):
-                logger.debug('A列に今日の日付が見つかりました。見つけた日付：{0}'.format(today_md_slash))
-                target_row_num = cell.row
-                break
+    for row_num in range(BUSINESS_DAY_EXCEL_ROW_MAP[today_m_int][0], BUSINESS_DAY_EXCEL_ROW_MAP[today_m_int][1]):
+        cell_value = ws.Range('A' + str(row_num)).Value
+        if (type(cell_value) is TimeType and today_md_slash == cell_value.strftime('%#m/%#d')):
+            logger.debug('A列に今日の日付が見つかりました。見つけた日付：{0}'.format(today_md_slash))
+            target_row_num = row_num
+            break
         else:
             continue
         break
-    else:
+
+    if target_row_num is None:
         logger.debug('A列に今日の日付が見つかりませんでした。')
+        wb.Close()
+        app.Quit()
         sys.exit(1)
 
-    # 入力シート内の追記位置が見つかったら書き込んで保存
-    if target_row_num is not None:
-        # M列(口座A)に上で取得した計を追記
-        ws['M' + str(target_row_num)] = current_sum
-        wb.save(config['trade_performance_xlsx_path'])
+    # M列(口座A欄)に上で取得した計を追記して保存
+    ws.Range('M' + str(target_row_num)).Value = current_sum
+    logger.info('Excelファイルに追記しました。')
+    wb.Save()
+    logger.info('Excelファイルを上書き保存しました')
+    wb.Close()
+    app.Quit()
 
     logger.info("trade-performance-auto-input-2021 end.")
     return
