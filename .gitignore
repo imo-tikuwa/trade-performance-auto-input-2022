@@ -1,0 +1,24 @@
+/__pycache__
+/log/*.*
+/settings.ini
+/work/20*
+
+# pyinstaller
+/build/
+/dist/
+
+# Virtualenv
+# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+/venv/.Python
+/venv/[Bb]in
+/venv/[Ii]nclude
+/venv/[Ll]ib
+/venv/[Ll]ib64
+/venv/[Ll]ocal
+/venv/[Ss]cripts
+/venv/pyvenv.cfg
+/venv/.venv
+/venv/pip-selfcheck.json
+
+# ignore xlsx
+/*.xlsx
