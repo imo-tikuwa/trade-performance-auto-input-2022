@@ -29,18 +29,21 @@ from pywintypes import TimeType
 from encrypter import simple_encrypter
 # バックアップ用
 import shutil
+# ランダム文字列生成用
+import random
+import string
 
 # 定数
 CONFIG_FILE_NAME = 'settings.ini'
 CONFIG_OPT_LOGIN_ID = 'login_id'
 CONFIG_OPT_PASSWORD = 'password'
 CONFIG_OPT_CHROME_EXECUTABLE_PATH = 'chrome_executable_path'
+CONFIG_OPT_ENCRYPTION_KEY = 'encryption_key'
 CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH = 'trade_performance_xlsx_path'
 CURRENT_DATE = datetime.now().strftime("%Y%m%d")
 WORK_DIR = 'work' + os.sep + CURRENT_DATE + os.sep
 LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
-ENCRYPTION_KEY = 'UWAm1mweGbaCdwab'
 # Trade-Performance(2021年度)の各月の入力行数
 BUSINESS_DAY_EXCEL_ROW_MAP = {
     1: [4, 22],
@@ -68,22 +71,31 @@ def get_config():
     設定ファイルから設定を取得する
     設定ファイルに設定が存在しない場合は対話形式で設定を作成する
     """
-    config_name_default = 'default'
-    config_name_chrome = 'chrome'
-
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE_NAME, 'cp932')
+    config_section_name = 'default'
 
     # 設定ファイル内にchrome,defaultセクションが存在しない場合は作成
-    if not config.has_section(config_name_chrome):
-        logger.debug("{0}に{1}セクションを作成します".format(CONFIG_FILE_NAME, config_name_chrome))
-        config.add_section(config_name_chrome)
-    if not config.has_section(config_name_default):
-        logger.debug("{0}に{1}セクションを作成します".format(CONFIG_FILE_NAME, config_name_default))
-        config.add_section(config_name_default)
+    if not config.has_section(config_section_name):
+        logger.debug("{0}に{1}セクションを作成します".format(CONFIG_FILE_NAME, config_section_name))
+        config.add_section(config_section_name)
+    if not config.has_section(config_section_name):
+        logger.debug("{0}に{1}セクションを作成します".format(CONFIG_FILE_NAME, config_section_name))
+        config.add_section(config_section_name)
+
+    # 設定ファイル内に暗号化に使用するキーが存在しない場合は作成
+    if not config.has_option(config_section_name, CONFIG_OPT_ENCRYPTION_KEY):
+        logger.debug("暗号化に使用するキーが存在しないため生成します")
+        encryption_key = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+        config.set(config_section_name, CONFIG_OPT_ENCRYPTION_KEY, encryption_key)
+        with open(CONFIG_FILE_NAME, 'w') as config_file:
+            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_section_name, CONFIG_OPT_ENCRYPTION_KEY))
+            config.write(config_file)
+    else:
+        encryption_key = config.get(config_section_name, CONFIG_OPT_ENCRYPTION_KEY)
 
     # ChromeDriverのパス
-    if not config.has_option(config_name_chrome, CONFIG_OPT_CHROME_EXECUTABLE_PATH):
+    if not config.has_option(config_section_name, CONFIG_OPT_CHROME_EXECUTABLE_PATH):
         logger.info("ChromeDriverのパスが設定されていないので、設定してください")
         root = tkinter.Tk()
         root.withdraw()
@@ -92,48 +104,48 @@ def get_config():
             logger.error("ChromeDriverのパスは必須です")
             sys.exit(1)
         logger.debug("選択されたファイル：{0}".format(chrome_executable_path))
-        config.set(config_name_chrome, CONFIG_OPT_CHROME_EXECUTABLE_PATH, chrome_executable_path)
+        config.set(config_section_name, CONFIG_OPT_CHROME_EXECUTABLE_PATH, chrome_executable_path)
         with open(CONFIG_FILE_NAME, 'w') as config_file:
-            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_name_chrome, CONFIG_OPT_CHROME_EXECUTABLE_PATH))
+            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_section_name, CONFIG_OPT_CHROME_EXECUTABLE_PATH))
             config.write(config_file)
     else:
-        chrome_executable_path = config.get(config_name_chrome, CONFIG_OPT_CHROME_EXECUTABLE_PATH)
+        chrome_executable_path = config.get(config_section_name, CONFIG_OPT_CHROME_EXECUTABLE_PATH)
 
     # ログインID
-    if not config.has_option(config_name_default, CONFIG_OPT_LOGIN_ID):
+    if not config.has_option(config_section_name, CONFIG_OPT_LOGIN_ID):
         logger.info("SBI証券のログインIDを入力してください")
         login_id = input("入力：")
         if login_id == '':
             logger.error("SBI証券のログインIDは必須です")
             sys.exit(1)
         logger.debug("入力されたログインID：{0}".format(login_id))
-        saving_login_id = simple_encrypter.encrypt(login_id, ENCRYPTION_KEY)
-        config.set(config_name_default, CONFIG_OPT_LOGIN_ID, saving_login_id)
+        saving_login_id = simple_encrypter.encrypt(login_id, encryption_key)
+        config.set(config_section_name, CONFIG_OPT_LOGIN_ID, saving_login_id)
         with open(CONFIG_FILE_NAME, 'w') as config_file:
-            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_name_default, CONFIG_OPT_LOGIN_ID))
+            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_section_name, CONFIG_OPT_LOGIN_ID))
             config.write(config_file)
     else:
-        login_id = config.get(config_name_default, CONFIG_OPT_LOGIN_ID)
-        login_id = simple_encrypter.decrypt(login_id, ENCRYPTION_KEY)
+        login_id = config.get(config_section_name, CONFIG_OPT_LOGIN_ID)
+        login_id = simple_encrypter.decrypt(login_id, encryption_key)
 
     # ログインパスワード(パスワードはsettings.iniに保存する際に暗号化する)
-    if not config.has_option(config_name_default, CONFIG_OPT_PASSWORD):
+    if not config.has_option(config_section_name, CONFIG_OPT_PASSWORD):
         logger.info("SBI証券のログインパスワードを入力してください")
         password = input("入力：")
         if password == '':
             logger.error("SBI証券のログインパスワードは必須です")
             sys.exit(1)
-        saving_password = simple_encrypter.encrypt(password, ENCRYPTION_KEY)
-        config.set(config_name_default, CONFIG_OPT_PASSWORD, saving_password)
+        saving_password = simple_encrypter.encrypt(password, encryption_key)
+        config.set(config_section_name, CONFIG_OPT_PASSWORD, saving_password)
         with open(CONFIG_FILE_NAME, 'w') as config_file:
-            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_name_default, CONFIG_OPT_PASSWORD))
+            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_section_name, CONFIG_OPT_PASSWORD))
             config.write(config_file)
     else:
-        password = config.get(config_name_default, CONFIG_OPT_PASSWORD)
-        password = simple_encrypter.decrypt(password, ENCRYPTION_KEY)
+        password = config.get(config_section_name, CONFIG_OPT_PASSWORD)
+        password = simple_encrypter.decrypt(password, encryption_key)
 
     # Trade-Performance-2021(xlsx)のパス
-    if not config.has_option(config_name_default, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH):
+    if not config.has_option(config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH):
         logger.info("Trade-Performance-2021.xlsxのパスが設定されていないので、設定してください")
         root = tkinter.Tk()
         root.withdraw()
@@ -142,18 +154,19 @@ def get_config():
             logger.error("Trade-Performance-2021.xlsxのパスは必須です")
             sys.exit(1)
         logger.debug("選択されたファイル：{0}".format(trade_performance_xlsx_path))
-        config.set(config_name_default, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH, trade_performance_xlsx_path)
+        config.set(config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH, trade_performance_xlsx_path)
         with open(CONFIG_FILE_NAME, 'w') as config_file:
-            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_name_default, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH))
+            logger.debug("{0}の{1}セクションに{2}を追記して保存します".format(CONFIG_FILE_NAME, config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH))
             config.write(config_file)
     else:
-        trade_performance_xlsx_path = config.get(config_name_default, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH)
+        trade_performance_xlsx_path = config.get(config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH)
 
     return {
         'chrome_executable_path': chrome_executable_path,
         'login_id': login_id,
         'password': password,
         'trade_performance_xlsx_path': trade_performance_xlsx_path,
+        'encryption_key': encryption_key,
     }
 
 def save_current_html_source(driver, debug_log_title, htmlname):
@@ -164,16 +177,17 @@ def save_current_html_source(driver, debug_log_title, htmlname):
     with open(WORK_DIR + htmlname, 'w', encoding='utf-8') as f:
         f.write(driver.page_source)
 
-# 設定取得
-config = get_config()
-
 @click.command(context_settings = dict(help_option_names = ['-h', '--help']))
 @click.option('--debug', is_flag = True, help = "debugログを出力します")
 def main(debug):
 
     logger.info("trade-performance-auto-input-2021 start.")
+
     if debug:
         logzero.loglevel(logging.DEBUG)
+
+    # 設定取得
+    config = get_config()
 
     logger.info("workディレクトリに本日分の作業フォルダ作成")
     if not os.path.exists(WORK_DIR):
