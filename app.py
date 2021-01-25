@@ -12,8 +12,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 import logging
 import logzero
 from logzero import logger
-# スリープ用
-import time
 # 設定ファイル読み込み&出力
 import configparser
 # ディレクトリ、ファイルパス取得用
