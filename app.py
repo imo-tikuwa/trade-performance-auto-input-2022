@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import NoSuchElementException
 # ロギング用
 import logging
 import logzero
@@ -167,13 +168,6 @@ def get_config():
         'encryption_key': encryption_key,
     }
 
-def save_current_html_source(driver, debug_log_title, htmlname):
-    """
-    seleniumが参照中のhtmlソースを保存する
-    """
-    logger.debug(debug_log_title)
-    with open(WORK_DIR + htmlname, 'w', encoding='utf-8') as f:
-        f.write(driver.page_source)
 
 @click.command(context_settings = dict(help_option_names = ['-h', '--help']))
 @click.option('--debug', is_flag = True, help = "debugログを出力します")
@@ -201,25 +195,35 @@ def main(debug):
 
     driver = webdriver.Chrome(executable_path = config['chrome_executable_path'], options = options)
 
-    logger.info("SBI証券にログイン")
-    logger.debug("ログイン画面を開く")
-    driver.get("https://www.sbisec.co.jp/ETGate")
+    logger.info("SBI証券にログイン、口座管理画面を開き、資産合計を取得する")
+    current_sum = None
+    for trial_num in range(3):
+        # ログイン後の口座管理画面のURLにアクセス
+        driver.get('https://site2.sbisec.co.jp/ETGate/?_ControlID=WPLETacR001Control&_PageID=DefaultPID&_DataStoreID=DSWPLETacR001Control&_ActionID=DefaultAID&getFlg=on')
+        logger.debug('{0}回目のアクセス'.format(trial_num + 1))
+        try:
+            # ログインセッションが存在しない場合ログイン画面が表示されるのでログイン情報を入力してログインボタンをクリック
+            driver.find_element_by_css_selector("input[name='user_id']").send_keys(config['login_id'])
+            driver.find_element_by_css_selector("input[name='user_password']").send_keys(config['password'])
+            logger.debug('ログイン処理実行')
+            driver.find_element_by_css_selector("input[name='ACT_login']").click()
+        except NoSuchElementException as e:
+            # 口座管理画面が開けた場合 = ログイン情報の入力欄が見つからずにNoSuchElementExceptionがスローされる
+            # 口座管理画面から目的の値を取得する
+            try:
+                logger.debug('口座管理画面から保有資産の合計金額を取得')
+                sum_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr:nth-child(8) > td:nth-child(2) > div > b'
+                current_sum = driver.find_element_by_css_selector(sum_selector_path).text
+                break
+            except NoSuchElementException as e:
+                logger.error('口座管理画面から保有資産の合計金額の取得に失敗しました。')
+                logger.error(e)
+                sys.exit(1)
 
-    logger.debug("ログイン情報を入力、ログインボタンクリック")
-    driver.find_element_by_css_selector("input[name='user_id']").send_keys(config['login_id'])
-    driver.find_element_by_css_selector("input[name='user_password']").send_keys(config['password'])
-    driver.find_element_by_css_selector("input[name='ACT_login']").click()
-    if debug:
-        save_current_html_source(driver, 'ログイン後画面のソースを保存', 'login_after.html')
-
-    logger.info("口座管理画面を開く")
-    driver.get('https://site2.sbisec.co.jp/ETGate/?_ControlID=WPLETacR001Control&_PageID=DefaultPID&_DataStoreID=DSWPLETacR001Control&_ActionID=DefaultAID&getFlg=on')
-    if debug:
-        save_current_html_source(driver, '口座管理画面のソースを保存', 'account_management.html')
-
-    logger.debug('口座管理画面の「計」を取得')
-    sum_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr:nth-child(8) > td:nth-child(2) > div > b'
-    current_sum = driver.find_element_by_css_selector(sum_selector_path).text
+    # 目的の値が見つからないときに複数回口座管理画面を開く処理を実施、保有資産の合計金額が取得できなかったらエラー吐いて終了
+    if current_sum is None:
+        logger.error('口座管理画面から保有資産の合計金額の取得に失敗しました。')
+        sys.exit(1)
 
     logger.info("GoogleChrome正常終了")
     driver.close()
