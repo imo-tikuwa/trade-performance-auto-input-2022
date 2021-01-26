@@ -199,7 +199,7 @@ def main(debug):
     current_sum = None
     for trial_num in range(3):
         # ログイン後の口座管理画面のURLにアクセス
-        driver.get('https://site2.sbisec.co.jp/ETGate/?_ControlID=WPLETacR001Control&_PageID=DefaultPID&_DataStoreID=DSWPLETacR001Control&_ActionID=DefaultAID&getFlg=on')
+        driver.get('https://site2.sbisec.co.jp/ETGate/?_ControlID=WPLETacR001Control')
         logger.debug('{0}回目のアクセス'.format(trial_num + 1))
         try:
             # ログインセッションが存在しない場合ログイン画面が表示されるのでログイン情報を入力してログインボタンをクリック
