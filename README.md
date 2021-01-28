@@ -1,5 +1,9 @@
 # trade-performance-auto-input-2021
 
+## このプログラムについて
+こちらの成績管理ツール(Excelファイル)への入力を自動化します  
+https://stock-analysis28.com/tool
+
 ## 環境構築
 ```
 python -m venv venv
@@ -17,15 +21,8 @@ python app.py
  - Windows 10 Pro
  - python 3.8.2
 
-## 自動化用の実行バッチ例
-`trade-performance-auto-input-2021.bat`としてリポジトリ直下に置いてあります。  
-(venv構築およびrequirements.txtに記載のモジュールのインストールを済ませておく必要あり)
-```
-@echo off
-
-cd /D %~dp0
-call .\venv\Scripts\activate.bat
-python app.py --debug
-call deactivate.bat
-pause
-```
+## 使い方
+1. venvの環境構築する
+2. 15時以降にapp.pyを呼び出す
+3. 初回のみchromedriverのパス、SBI証券のログインID/PW、追記先のExcelファイルパスを設定する
+4. 2回目以降は自動化用のバッチ(`trade-performance-auto-input-2021.bat`)から起動するなど
