@@ -2,7 +2,8 @@
 
 ## このプログラムについて
 こちらの成績管理ツール(Excelファイル)への入力を自動化します  
-https://stock-analysis28.com/tool
+https://stock-analysis28.com/tool  
+※リンク先の管理者は私ではないのでこのツールについて問い合わせのないようお願いします。
 
 ## 環境構築
 ```
