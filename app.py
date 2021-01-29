@@ -45,19 +45,23 @@ LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
 # Trade-Performance(2021年度)の各月の入力行数
 BUSINESS_DAY_EXCEL_ROW_MAP = {
-    1: [4, 22],
-    2: [4, 21],
-    3: [4, 26],
-    4: [4, 24],
-    5: [4, 21],
-    6: [4, 25],
-    7: [4, 23],
-    8: [4, 24],
-    9: [4, 23],
-    10: [4, 24],
-    11: [4, 23],
-    12: [4, 25],
+    1: [4, 23],
+    2: [4, 22],
+    3: [4, 27],
+    4: [4, 25],
+    5: [4, 22],
+    6: [4, 26],
+    7: [4, 24],
+    8: [4, 25],
+    9: [4, 24],
+    10: [4, 25],
+    11: [4, 24],
+    12: [4, 26],
 }
+
+for row_num in range(BUSINESS_DAY_EXCEL_ROW_MAP[1][0], BUSINESS_DAY_EXCEL_ROW_MAP[1][1]):
+    logger.info(row_num)
+sys.exit(1)
 
 # ログファイル
 if not os.path.exists(LOG_DIR):
