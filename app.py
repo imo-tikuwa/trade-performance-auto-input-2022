@@ -59,10 +59,6 @@ BUSINESS_DAY_EXCEL_ROW_MAP = {
     12: [4, 26],
 }
 
-for row_num in range(BUSINESS_DAY_EXCEL_ROW_MAP[1][0], BUSINESS_DAY_EXCEL_ROW_MAP[1][1]):
-    logger.info(row_num)
-sys.exit(1)
-
 # ログファイル
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
