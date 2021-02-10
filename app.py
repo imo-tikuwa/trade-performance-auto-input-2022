@@ -212,8 +212,13 @@ def main(debug):
             # 口座管理画面から目的の値を取得する
             try:
                 logger.debug('口座管理画面から保有資産の合計金額を取得')
-                sum_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr:nth-child(8) > td:nth-child(2) > div > b'
-                current_sum = driver.find_element_by_css_selector(sum_selector_path).text
+                # cssセレクタについて信用取引の持越しがある/なしなんかで、HTMLの構造がちょっと変わった模様(no such elementの例外出てた)
+                # そのためtrのWebElementリストを取得、ループして先頭のtdのテキストが「計」の行から、保有資産の合計金額を取得する形に変更
+                tr_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr'
+                for element in driver.find_elements_by_css_selector(tr_selector_path):
+                    if element.find_element_by_css_selector('td:nth-child(1)').text == '計':
+                        current_sum = element.find_element_by_css_selector('td:nth-child(2) > div > b').text
+                        break
                 break
             except NoSuchElementException as e:
                 logger.error('口座管理画面から保有資産の合計金額の取得に失敗しました。')
