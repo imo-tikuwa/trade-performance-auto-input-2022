@@ -214,7 +214,7 @@ def main(debug):
                 logger.debug('口座管理画面から保有資産の合計金額を取得')
                 # cssセレクタについて信用取引の持越しがある/なしなんかで、HTMLの構造がちょっと変わった模様(no such elementの例外出てた)
                 # そのためtrのWebElementリストを取得、ループして先頭のtdのテキストが「計」の行から、保有資産の合計金額を取得する形に変更
-                tr_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(20) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr'
+                tr_selector_path = 'body > div:nth-child(1) > table > tbody > tr > td:nth-child(1) > table > tbody > tr:nth-child(2) > td > table:nth-child(1) > tbody > tr > td > form > table:nth-child(3) > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(19) > tbody > tr > td:nth-child(1) > table:nth-child(7) > tbody > tr:nth-child(8)'
                 for element in driver.find_elements_by_css_selector(tr_selector_path):
                     if element.find_element_by_css_selector('td:nth-child(1)').text == '計':
                         current_sum = element.find_element_by_css_selector('td:nth-child(2) > div > b').text
