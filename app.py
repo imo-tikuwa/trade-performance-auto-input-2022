@@ -19,8 +19,8 @@ import configparser
 import tkinter, tkinter.filedialog
 # コマンドラインパーサ
 import click
-# 現在日付取得用
-from datetime import datetime
+# 現在日時取得用
+from datetime import datetime, timedelta, timezone
 # Excelファイル操作
 import win32com.client
 from pywintypes import TimeType
@@ -32,6 +32,20 @@ import shutil
 import random
 import string
 
+def is_before_trading():
+    """
+    取引時間前かどうかを判定する
+    現在時刻が0時～9時のときtrueとなる
+    """
+    return 0 < CURRENT_HMS_INT < 90000
+
+# プログラムで共通して使用するタイムゾーン生成、現在時刻取得
+JST = timezone(timedelta(hours=+9), 'JST')
+CURRENT_DATE = datetime.now(JST)
+CURRENT_HMS_INT = int(CURRENT_DATE.strftime("%H%M%S"))
+TARGET_MD_SLASH = (CURRENT_DATE - timedelta(days=1)).strftime('%#m/%#d') if is_before_trading() else CURRENT_DATE.strftime('%#m/%#d')
+TARGET_M_INT = int((CURRENT_DATE - timedelta(days=1)).strftime('%#m')) if is_before_trading() else int(CURRENT_DATE.strftime('%#m'))
+
 # 定数
 CONFIG_FILE_NAME = 'settings.ini'
 CONFIG_OPT_LOGIN_ID = 'login_id'
@@ -39,8 +53,10 @@ CONFIG_OPT_PASSWORD = 'password'
 CONFIG_OPT_CHROME_EXECUTABLE_PATH = 'chrome_executable_path'
 CONFIG_OPT_ENCRYPTION_KEY = 'encryption_key'
 CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH = 'trade_performance_xlsx_path'
-CURRENT_DATE = datetime.now().strftime("%Y%m%d")
-WORK_DIR = 'work' + os.sep + CURRENT_DATE + os.sep
+if is_before_trading():
+    WORK_DIR = 'work' + os.sep + (CURRENT_DATE - timedelta(days=1)).strftime("%Y%m%d") + os.sep
+else:
+    WORK_DIR = 'work' + os.sep + CURRENT_DATE.strftime("%Y%m%d") + os.sep
 LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
 # Trade-Performance(2021年度)の各月の入力行数
@@ -236,23 +252,21 @@ def main(debug):
 
     logger.info("Excelファイルのバックアップを作成")
     shutil.copy(config['trade_performance_xlsx_path'], WORK_DIR + os.path.basename(config['trade_performance_xlsx_path']))
-    today_md_slash = datetime.today().strftime('%#m/%#d')
-    today_m_int = int(datetime.today().strftime('%#m'))
 
     logger.debug("pywin32でExcelファイルを開く")
     app = win32com.client.Dispatch("Excel.Application")
     wb = app.Workbooks.Open(config['trade_performance_xlsx_path'])
 
-    target_sheet_name = datetime.today().strftime('%#m') + '月'
+    target_sheet_name = CURRENT_DATE.strftime('%#m') + '月'
     logger.debug(target_sheet_name + 'のシート取得')
     ws = wb.Worksheets(target_sheet_name)
 
     # A列の月日とプログラムの実行日を比較して↑で取得した「計」の書き込み先を見つける
     target_row_num = None
-    for row_num in range(BUSINESS_DAY_EXCEL_ROW_MAP[today_m_int][0], BUSINESS_DAY_EXCEL_ROW_MAP[today_m_int][1]):
+    for row_num in range(BUSINESS_DAY_EXCEL_ROW_MAP[TARGET_M_INT][0], BUSINESS_DAY_EXCEL_ROW_MAP[TARGET_M_INT][1]):
         cell_value = ws.Range('A' + str(row_num)).Value
-        if (type(cell_value) is TimeType and today_md_slash == cell_value.strftime('%#m/%#d')):
-            logger.debug('A列に今日の日付が見つかりました。見つけた日付：{0}'.format(today_md_slash))
+        if (type(cell_value) is TimeType and TARGET_MD_SLASH == cell_value.strftime('%#m/%#d')):
+            logger.debug('A列に今日の日付が見つかりました。見つけた日付：{0}'.format(TARGET_MD_SLASH))
             target_row_num = row_num
             break
         else:
