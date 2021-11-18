@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, SessionNotCreatedException
 # ロギング用
 import logging
 import logzero
@@ -209,7 +209,11 @@ def main(debug):
     if not debug:
         options.add_argument('--headless')
 
-    driver = webdriver.Chrome(executable_path = config['chrome_executable_path'], options = options)
+    try:
+        driver = webdriver.Chrome(executable_path = config['chrome_executable_path'], options = options)
+    except SessionNotCreatedException as e:
+        logger.error(e.msg)
+        sys.exit(1)
 
     logger.info("SBI証券にログイン、口座管理画面を開き、資産合計を取得する")
     current_sum = None
