@@ -1,4 +1,4 @@
-# trade-performance-auto-input-2021
+# trade-performance-auto-input-2022
 
 ## このプログラムについて
 こちらの成績管理ツール(Excelファイル)への入力を自動化します  
@@ -26,4 +26,4 @@ python app.py
 1. venvの環境構築する
 2. 15時以降にapp.pyを呼び出す
 3. 初回のみchromedriverのパス、SBI証券のログインID/PW、追記先のExcelファイルパスを設定する
-4. 2回目以降は自動化用のバッチ(`trade-performance-auto-input-2021.bat`)から起動するなど
+4. 2回目以降は自動化用のバッチ(`trade-performance-auto-input-2022.bat`)から起動するなど
