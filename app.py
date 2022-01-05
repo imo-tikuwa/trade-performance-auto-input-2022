@@ -59,18 +59,18 @@ else:
     WORK_DIR = 'work' + os.sep + CURRENT_DATE.strftime("%Y%m%d") + os.sep
 LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
-# Trade-Performance(2021年度)の各月の入力行数
+# Trade-Performance(2022年度)の各月の入力行数
 BUSINESS_DAY_EXCEL_ROW_MAP = {
     1: [4, 23],
     2: [4, 22],
-    3: [4, 27],
-    4: [4, 25],
-    5: [4, 22],
+    3: [4, 26],
+    4: [4, 24],
+    5: [4, 23],
     6: [4, 26],
     7: [4, 24],
-    8: [4, 25],
+    8: [4, 26],
     9: [4, 24],
-    10: [4, 25],
+    10: [4, 24],
     11: [4, 24],
     12: [4, 26],
 }
@@ -159,14 +159,14 @@ def get_config():
         password = config.get(config_section_name, CONFIG_OPT_PASSWORD)
         password = simple_encrypter.decrypt(password, encryption_key)
 
-    # Trade-Performance-2021(xlsx)のパス
+    # Trade-Performance-2022(xlsx)のパス
     if not config.has_option(config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH):
-        logger.info("Trade-Performance-2021.xlsxのパスが設定されていないので、設定してください")
+        logger.info("Trade-Performance-2022.xlsxのパスが設定されていないので、設定してください")
         root = tkinter.Tk()
         root.withdraw()
-        trade_performance_xlsx_path = tkinter.filedialog.askopenfilename(filetypes = [("Trade-Performance-2021.xlsx", "*.xlsx")], initialdir = os.getcwd())
+        trade_performance_xlsx_path = tkinter.filedialog.askopenfilename(filetypes = [("Trade-Performance-2022.xlsx", "*.xlsx")], initialdir = os.getcwd())
         if trade_performance_xlsx_path == '':
-            logger.error("Trade-Performance-2021.xlsxのパスは必須です")
+            logger.error("Trade-Performance-2022.xlsxのパスは必須です")
             sys.exit(1)
         logger.debug("選択されたファイル：{0}".format(trade_performance_xlsx_path))
         config.set(config_section_name, CONFIG_OPT_TRADE_PERFORMANCE_XLSX_PATH, trade_performance_xlsx_path)
@@ -189,7 +189,7 @@ def get_config():
 @click.option('--debug', is_flag = True, help = "debugログを出力します")
 def main(debug):
 
-    logger.info("trade-performance-auto-input-2021 start.")
+    logger.info("trade-performance-auto-input-2022 start.")
 
     if debug:
         logzero.loglevel(logging.DEBUG)
@@ -291,7 +291,7 @@ def main(debug):
     wb.Close()
     app.Quit()
 
-    logger.info("trade-performance-auto-input-2021 end.")
+    logger.info("trade-performance-auto-input-2022 end.")
     return
 
 
